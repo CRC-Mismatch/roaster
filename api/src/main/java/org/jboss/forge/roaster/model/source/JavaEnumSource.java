@@ -23,7 +23,8 @@ public interface JavaEnumSource extends JavaEnum<JavaEnumSource>, JavaSource<Jav
          InterfaceCapableSource<JavaEnumSource>,
          FieldHolderSource<JavaEnumSource>,
          MethodHolderSource<JavaEnumSource>,
-         PropertyHolderSource<JavaEnumSource>, TypeHolderSource<JavaEnumSource>, StaticCapableSource<JavaEnumSource>
+         PropertyHolderSource<JavaEnumSource>,
+         InitializerHolderSource<JavaEnumSource>, TypeHolderSource<JavaEnumSource>, StaticCapableSource<JavaEnumSource>
 {
    /**
     * Return the {@link EnumConstant} with the given name, or return null if no such constant exists.
