@@ -6,6 +6,9 @@
  */
 package org.jboss.forge.roaster.model.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
@@ -14,9 +17,12 @@ import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jface.text.Document;
+import org.jboss.forge.roaster.model.Initializer;
 import org.jboss.forge.roaster.model.JavaClass;
 import org.jboss.forge.roaster.model.JavaType;
+import org.jboss.forge.roaster.model.ast.InitializerFinderVisitor;
 import org.jboss.forge.roaster.model.ast.ModifierAccessor;
+import org.jboss.forge.roaster.model.source.InitializerSource;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
 import org.jboss.forge.roaster.model.source.JavaSource;
 import org.jboss.forge.roaster.model.source.MethodSource;
@@ -221,4 +227,91 @@ public class JavaClassImpl extends AbstractGenericCapableJavaSource<JavaClassSou
 
       return this;
    }
+
+	@Override
+	public boolean hasInitializers() {
+		if (!getInitializers().isEmpty())
+			return true;
+		else
+			return false;
+	}
+
+	@Override
+	public boolean hasInitializer(Initializer<JavaClassSource> initializer) {
+		return getInitializers().contains(initializer);
+	}
+
+	@Override
+	public int getInitializerPosition(Initializer<JavaClassSource> initializer) {
+		return getInitializers().indexOf(initializer);
+	}
+
+	@Override
+	public InitializerSource<JavaClassSource> getInitializer(int position) {
+		return getInitializers().get(position);
+	}
+
+	@Override
+	public List<InitializerSource<JavaClassSource>> getInitializers() {
+		List<InitializerSource<JavaClassSource>> results = new ArrayList<InitializerSource<JavaClassSource>>();
+		
+		InitializerFinderVisitor visitor = new InitializerFinderVisitor();
+		body.accept(visitor);
+		
+		List<org.eclipse.jdt.core.dom.Initializer> initializers = visitor.getInitializers();
+		for (org.eclipse.jdt.core.dom.Initializer initializer : initializers)
+		{
+			results.add(new InitializerImpl<JavaClassSource>((JavaClassSource) this, initializer));
+		}
+		return results;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public InitializerSource<JavaClassSource> addInitializer() {
+		InitializerSource<JavaClassSource> i = new InitializerImpl<JavaClassSource>((JavaClassSource) this);
+		getBodyDeclaration().bodyDeclarations().add(i.getInternal());
+		return i;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public InitializerSource<JavaClassSource> addInitializer(int position) {
+		List<InitializerSource<JavaClassSource>> curIs = getInitializers();
+		int internalPosition = curIs.size();
+		if (curIs.size() - 1 >= position) {
+			InitializerSource<JavaClassSource> posI = getInitializers().get(position);
+			internalPosition = getBodyDeclaration().bodyDeclarations().indexOf(posI.getInternal());
+		}
+		InitializerSource<JavaClassSource> i = new InitializerImpl<JavaClassSource>((JavaClassSource) this);
+		getBodyDeclaration().bodyDeclarations().add(internalPosition, i.getInternal());
+		return i;
+	}
+
+	@Override
+	public InitializerSource<JavaClassSource> addInitializer(String body) {
+		return addInitializer().setBody(body);
+	}
+
+	@Override
+	public InitializerSource<JavaClassSource> addInitializer(Initializer<JavaClassSource> initializer) {
+		return addInitializer().setBody(initializer.getBody()).setStatic(initializer.isStatic());
+	}
+
+	@Override
+	public InitializerSource<JavaClassSource> addInitializer(int position, Initializer<JavaClassSource> initializer) {
+		return addInitializer(position).setBody(initializer.getBody()).setStatic(initializer.isStatic());
+	}
+
+	@Override
+	public JavaClassSource removeInitializer(int position) {
+		InitializerSource<JavaClassSource> initializer = getInitializers().get(position);
+		return removeInitializer(initializer);
+	}
+
+	@Override
+	public JavaClassSource removeInitializer(Initializer<JavaClassSource> initializer) {
+		getBodyDeclaration().bodyDeclarations().remove(initializer.getInternal());
+		return (JavaClassSource) this;
+	}
 }

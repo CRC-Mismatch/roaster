@@ -15,7 +15,10 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jface.text.Document;
+import org.jboss.forge.roaster.model.Initializer;
+import org.jboss.forge.roaster.model.ast.InitializerFinderVisitor;
 import org.jboss.forge.roaster.model.source.EnumConstantSource;
+import org.jboss.forge.roaster.model.source.InitializerSource;
 import org.jboss.forge.roaster.model.source.JavaEnumSource;
 import org.jboss.forge.roaster.model.source.JavaSource;
 
@@ -89,5 +92,92 @@ public class JavaEnumImpl extends AbstractJavaSourceMemberHolder<JavaEnumSource>
    {
       return this;
    }
+
+	@Override
+	public boolean hasInitializers() {
+		if (!getInitializers().isEmpty())
+			return true;
+		else
+			return false;
+	}
+
+	@Override
+	public boolean hasInitializer(Initializer<JavaEnumSource> initializer) {
+		return getInitializers().contains(initializer);
+	}
+
+	@Override
+	public int getInitializerPosition(Initializer<JavaEnumSource> initializer) {
+		return getInitializers().indexOf(initializer);
+	}
+
+	@Override
+	public InitializerSource<JavaEnumSource> getInitializer(int position) {
+		return getInitializers().get(position);
+	}
+
+	@Override
+	public List<InitializerSource<JavaEnumSource>> getInitializers() {
+		List<InitializerSource<JavaEnumSource>> results = new ArrayList<InitializerSource<JavaEnumSource>>();
+		
+		InitializerFinderVisitor visitor = new InitializerFinderVisitor();
+		body.accept(visitor);
+		
+		List<org.eclipse.jdt.core.dom.Initializer> initializers = visitor.getInitializers();
+		for (org.eclipse.jdt.core.dom.Initializer initializer : initializers)
+		{
+			results.add(new InitializerImpl<JavaEnumSource>((JavaEnumSource) this, initializer));
+		}
+		return results;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public InitializerSource<JavaEnumSource> addInitializer() {
+		InitializerSource<JavaEnumSource> i = new InitializerImpl<JavaEnumSource>((JavaEnumSource) this);
+		getBodyDeclaration().bodyDeclarations().add(i.getInternal());
+		return i;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public InitializerSource<JavaEnumSource> addInitializer(int position) {
+		List<InitializerSource<JavaEnumSource>> curIs = getInitializers();
+		int internalPosition = curIs.size();
+		if (curIs.size() - 1 >= position) {
+			InitializerSource<JavaEnumSource> posI = getInitializers().get(position);
+			internalPosition = getBodyDeclaration().bodyDeclarations().indexOf(posI.getInternal());
+		}
+		InitializerSource<JavaEnumSource> i = new InitializerImpl<JavaEnumSource>((JavaEnumSource) this);
+		getBodyDeclaration().bodyDeclarations().add(internalPosition, i.getInternal());
+		return i;
+	}
+
+	@Override
+	public InitializerSource<JavaEnumSource> addInitializer(String body) {
+		return addInitializer().setBody(body);
+	}
+
+	@Override
+	public InitializerSource<JavaEnumSource> addInitializer(Initializer<JavaEnumSource> initializer) {
+		return addInitializer().setBody(initializer.getBody()).setStatic(initializer.isStatic());
+	}
+
+	@Override
+	public InitializerSource<JavaEnumSource> addInitializer(int position, Initializer<JavaEnumSource> initializer) {
+		return addInitializer(position).setBody(initializer.getBody()).setStatic(initializer.isStatic());
+	}
+
+	@Override
+	public JavaEnumSource removeInitializer(int position) {
+		InitializerSource<JavaEnumSource> initializer = getInitializers().get(position);
+		return removeInitializer(initializer);
+	}
+
+	@Override
+	public JavaEnumSource removeInitializer(Initializer<JavaEnumSource> initializer) {
+		getBodyDeclaration().bodyDeclarations().remove(initializer.getInternal());
+		return (JavaEnumSource) this;
+	}
 
 }
